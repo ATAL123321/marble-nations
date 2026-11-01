@@ -1,0 +1,1 @@
+{ "name": "marble-nations", "private": true, "scripts": { "render": "node render.js" } }

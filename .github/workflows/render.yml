@@ -1,0 +1,38 @@
+name: Render race
+run-name: race ${{ inputs.job }}
+on:
+  workflow_dispatch:
+    inputs:
+      job:   { description: "Job id from n8n", required: true }
+      teams: { description: "NAME:flagcode list, e.g. INDIA:in,USA:us", required: true }
+      theme: { description: "Background theme", required: false, default: "sky" }
+      ep:    { description: "Bottom label", required: false, default: "COUNTRY MARBLE RACE" }
+      seed:  { description: "Start seed", required: false, default: "1" }
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Install
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu-core > /dev/null
+          npm install --no-audit --no-fund playwright@1.56.0
+          npx playwright install --with-deps chromium
+      - name: Render
+        env:
+          TEAMS: ${{ inputs.teams }}
+          THEME: ${{ inputs.theme }}
+          EP: ${{ inputs.ep }}
+          SEED: ${{ inputs.seed }}
+          OUT: out
+        run: node render.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: race-${{ inputs.job }}
+          path: |
+            out/race.mp4
+            out/meta.json
+          retention-days: 3
