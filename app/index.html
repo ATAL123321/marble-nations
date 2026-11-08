@@ -117,7 +117,7 @@ const sc = sun.shadow.camera; sc.left=-14; sc.right=14; sc.top=14; sc.bottom=-14
 scene.add(sun); scene.add(sun.target);
 
 // ---------- physics ----------
-const world = new CANNON.World({gravity: new CANNON.Vec3(0,-17,0)});
+const world = new CANNON.World({gravity: new CANNON.Vec3(0,-18,0)});
 world.solver.iterations = 12;
 const mBall = new CANNON.Material('ball'), mTrack = new CANNON.Material('track'), mBump = new CANNON.Material('bump');
 world.addContactMaterial(new CANNON.ContactMaterial(mBall, mTrack, {friction:0.05, restitution:0.35}));
@@ -198,7 +198,7 @@ box(.5, totalDepth, DEPTH+.4,  HALFW+.25, -totalDepth/2+4, 0, 0, matTrack, mTrac
 }
 const kinds = ['pegs','spinner','funnel','bumpers','pistons','double','zigzag','spinner','pegs','gates'];
 let side = 1;
-for (let i=0; i<8; i++){
+for (let i=0; i<7; i++){
   // sloped platform with a gap at the low end
   const ang = R(.22,.30) * side;
   const len = HALFW*2 - 2.3;
@@ -208,11 +208,11 @@ for (let i=0; i<8; i++){
   y -= Math.sin(Math.abs(ang))*len/2 + 2.2;
   const kind = i===0 ? 'pegs' : kinds[Math.floor(rnd()*kinds.length)];
   sections.push(kind);
-  if (kind==='pegs'){ for (let r=0;r<2;r++) for (let k=0;k<(r%2?4:5);k++) cyl(.26, DEPTH, -HALFW+1.4+k*(2*HALFW-2.8)/4+(r%2)*(2*HALFW-2.8)/8, y - r*1.5, 0, OB.peg); y -= 3.4; }
+  if (kind==='pegs'){ const pw = 2*HALFW-4.0; for (let r=0;r<2;r++) for (let k=0;k<(r%2?4:5);k++) cyl(.26, DEPTH, -HALFW+2.0+k*pw/4+(r%2)*pw/8, y - r*1.75, 0, OB.peg); y -= 3.7; }
   else if (kind==='spinner'){ spinner(R(-1.5,1.5), y-.8, R(4,5), R(1.2,2.4)*(rnd()<.5?-1:1)); y -= 3.6; }
   else if (kind==='funnel'){ box(4.6,.35,DEPTH,-HALFW+2.3,y,0,-.45,matTrack,mTrack,OB.funnel); box(4.6,.35,DEPTH,HALFW-2.3,y,0,.45,matTrack,mTrack,OB.funnel); y -= 3.4; }
   else if (kind==='bumpers'){ for (let k=0;k<3;k++) cyl(.5, DEPTH, -3.4+k*3.4+R(-.4,.4), y - (k%2)*1.2, 0, OB.bump, mBump); y -= 3.4; }
-  else if (kind==='pistons'){ piston(-2.6, y-.6, 3.6, .9, R(2,3.4), 0); piston(2.6, y-.6, 3.6, .9, R(2,3.4), Math.PI); y -= 3.2; }
+  else if (kind==='pistons'){ piston(-2.3, y-.6, 3.0, .9, R(2,3.4), 0); piston(2.3, y-.6, 3.0, .9, R(2,3.4), Math.PI); y -= 3.2; }
   else if (kind==='double'){ spinner(-2.6, y-.9, 3.6, 2.2, OB.spin, 2); spinner(2.6, y-.9, 3.6, -2.2, OB.spin2, 2); y -= 3.8; }
   else if (kind==='zigzag'){ box(4,.35,DEPTH,-1.8,y,0,.35,matTrack,mTrack,OB.zig); y-=2.2; box(4,.35,DEPTH,1.8,y,0,-.35,matTrack,mTrack,OB.zig); y -= 2.6; }
   else if (kind==='gates'){ spinner(0, y-.9, 3.4, 3.0, OB.piston, 4); y -= 3.6; }
@@ -260,6 +260,7 @@ balls.forEach((b,i)=>b.body.addEventListener('collide', e=>{
 
 // ---------- loop (driven by capture script) ----------
 const FPS = 30, INTRO = 3.0;
+window.stuck = 0;
 let simT = 0, frame = 0, winner = null, endT = null, leader = -1, callT = -9, camY = 2;
 const score = [0,0];
 const big = document.getElementById('big'), call = document.getElementById('call');
@@ -280,10 +281,10 @@ function stepFrame(){
     b.trail.geometry.attributes.position.needsUpdate = true;
     if (b.fin===null && b.body.position.y < FINISH) b.fin = simT;
     if (simT > INTRO+1 && b.fin===null){ const sp = b.body.velocity.length(); b.slow = sp < .4 ? (b.slow||0)+dt : 0;
-      if (b.slow > 1.2){ b.body.velocity.set(R(-2.5,2.5), 2.5, 0); b.slow = 0; }
+      if (b.slow > 0.8){ b.body.velocity.set(R(-2.5,2.5), 2.5, 0); b.slow = 0; window.stuck++; }
       // progress watchdog: no real downward progress for 2.5s -> push it towards the gap and down
       if (b.bestY===undefined || b.body.position.y < b.bestY - .5){ b.bestY = b.body.position.y; b.lastProg = simT; }
-      if (simT - b.lastProg > 2.5){ b.kicks = (b.kicks||0)+1;
+      if (simT - b.lastProg > 1.5){ b.kicks = (b.kicks||0)+1; window.stuck++;
         if (b.kicks >= 3){ b.body.position.set(R(-HALFW+1,HALFW-1), b.body.position.y - 1.6, 0); }
         b.body.velocity.set((b.body.position.x>0?-1:1)*R(3,5), -2, 0); b.lastProg = simT; } }
   });
@@ -298,7 +299,7 @@ function stepFrame(){
     leader = ld; callT = simT; call.textContent = TEAMS[ld].name + ' TAKES THE LEAD!'; events.push({t:simT, kind:'whoosh', amp:1}); }
   call.style.opacity = (simT-callT<1.6 && winner===null) ? 1 : 0;
   if (winner===null){ const f = balls.map((b,i)=>[b.fin,i]).filter(x=>x[0]!==null).sort((a,b)=>a[0]-b[0]);
-    if (f.length){ winner = f[0][1]; score[winner]++; endT = simT + (NT>2?4.5:3.2); events.push({t:simT, kind:'win', amp:1});
+    if (f.length){ winner = f[0][1]; score[winner]++; endT = simT + (NT>2?3.6:2.8); events.push({t:simT, kind:'win', amp:1});
       if (NT===2){ document.getElementById('score').textContent = `${score[0]} - ${score[1]}`;
         document.getElementById(winner?'fb':'fa').classList.add('win'); }
       document.getElementById('who').textContent = 'Comment your country for the next race!';
@@ -307,7 +308,7 @@ function stepFrame(){
   if (simT < INTRO){ const n = 3 - Math.floor(simT); big.textContent = n; big.style.fontSize = (170 + 80*(1-(simT%1)))+'px'; big.style.color='#fff'; }
   else if (simT < INTRO+.7){ big.textContent = 'GO!'; big.style.color='#ffd628'; big.style.fontSize='190px'; }
   else if (winner!==null){ big.textContent = TEAMS[winner].name + ' WINS!'; big.style.color='#ffd628'; big.style.fontSize = NT>2?'110px':'130px';
-    if (NT>2 && simT > endT-3){ big.style.top='560px'; const pd=document.getElementById('podium'); pd.style.display='block';
+    if (NT>2 && simT > endT-2.6){ big.style.top='560px'; const pd=document.getElementById('podium'); pd.style.display='block';
       pd.innerHTML = order.map((ti,k)=>`<div class="prow">${k+1}. <img src="${TEAMS[ti].img}"> ${TEAMS[ti].name}</div>`).join(''); } }
   else big.textContent = '';
   // progress dots
@@ -323,7 +324,7 @@ function stepFrame(){
   sun.position.set(6, camY + 10, 14); sun.target.position.set(0, camY - 4, 0);
   if (!P.get('dry')) renderer.render(scene, camera);
   const done = (endT!==null && simT > endT) || simT > 45;
-  return {done, simT, winner: winner===null?null:TEAMS[winner].name};
+  return {done, simT, stuck: window.stuck, winner: winner===null?null:TEAMS[winner].name};
 }
 window.stepFrame = stepFrame; window.renderNow = ()=>renderer.render(scene, camera); window.dbg = ()=>balls.map(b=>b.body.position.y.toFixed(1)).join('|');
 window.getEvents = ()=>events;

@@ -78,15 +78,18 @@ function buildSfx(ev, durSec, file) {
   const teamParam = encodeURIComponent(teams.map(t => `${t.name}:flags/${t.code}.png`).join(','));
   const url = s => `http://127.0.0.1:8765/index.html?seed=${s}&theme=${theme}&teams=${teamParam}&ep=${encodeURIComponent(ep)}`;
 
-  // 1) find a seed with a clean race (winner, 26-42 seconds)
-  let chosen = null;
-  for (let tries = 0; tries < 15 && !chosen; tries++, seed += 7) {
+  // 1) find a seed with a clean race: a winner, no stuck marbles, 24-30 seconds
+  let chosen = null, best = null;
+  for (let tries = 0; tries < 30 && !chosen; tries++, seed += 7) {
     await page.goto(url(seed) + '&dry=1'); await page.evaluate(() => window.ready);
-    const r = await page.evaluate(() => { let i; do { i = window.stepFrame(); } while (!i.done); return { t: i.simT, w: i.winner }; });
+    const r = await page.evaluate(() => { let i; do { i = window.stepFrame(); } while (!i.done); return { t: i.simT, w: i.winner, s: i.stuck }; });
     console.log('dry seed', seed, JSON.stringify(r));
-    if (r.w && r.t >= 26 && r.t <= 42) chosen = seed;
+    if (!r.w) continue;
+    const score = r.s * 10 + Math.abs(r.t - 27);
+    if (!best || score < best.score) best = { seed, score };
+    if (r.s === 0 && r.t >= 24 && r.t <= 30) chosen = seed;
   }
-  if (!chosen) chosen = seed;
+  if (!chosen) chosen = best ? best.seed : seed;
 
   // 2) render frames
   await page.goto(url(chosen)); await page.evaluate(() => window.ready);
