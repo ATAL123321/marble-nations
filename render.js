@@ -47,7 +47,7 @@ function buildSfx(ev, durSec, file) {
   const a = new Float32Array(N);
   let rs = 12345; const rand = () => { rs = (rs * 16807) % 2147483647; return rs / 2147483647 * 2 - 1; };
   const add = (i0, fn, len) => { for (let k = 0; k < len && i0 + k < N; k++) a[i0 + k] += fn(k / SR); };
-  for (let k = 0; k < 4; k++) { const f = k < 3 ? 880 : 1760; add(Math.floor(k * SR), t => Math.sin(2 * Math.PI * f * t) * Math.exp(-t * 8) * .35, Math.floor(.25 * SR)); }
+  { let lp = 0; add(0, t => { lp = lp * .9 + rand() * .1; return lp * Math.sin(Math.PI * t / .6) * 2.4; }, Math.floor(.6 * SR)); } // start whoosh
   const last = {};
   for (const e of ev.events) {
     if (e.t > durSec || e.t - (last[e.kind] ?? -1) < .05) continue;
@@ -78,16 +78,16 @@ function buildSfx(ev, durSec, file) {
   const teamParam = encodeURIComponent(teams.map(t => `${t.name}:flags/${t.code}.png`).join(','));
   const url = s => `http://127.0.0.1:8765/index.html?seed=${s}&theme=${theme}&teams=${teamParam}&ep=${encodeURIComponent(ep)}`;
 
-  // 1) find a seed with a clean race: a winner, no stuck marbles, 24-30 seconds
+  // 1) find a seed with a clean race: a winner, no stuck marbles, 15-21 seconds
   let chosen = null, best = null;
   for (let tries = 0; tries < 30 && !chosen; tries++, seed += 7) {
     await page.goto(url(seed) + '&dry=1'); await page.evaluate(() => window.ready);
     const r = await page.evaluate(() => { let i; do { i = window.stepFrame(); } while (!i.done); return { t: i.simT, w: i.winner, s: i.stuck }; });
     console.log('dry seed', seed, JSON.stringify(r));
     if (!r.w) continue;
-    const score = r.s * 10 + Math.abs(r.t - 27);
+    const score = r.s * 10 + Math.abs(r.t - 18);
     if (!best || score < best.score) best = { seed, score };
-    if (r.s === 0 && r.t >= 24 && r.t <= 30) chosen = seed;
+    if (r.s === 0 && r.t >= 15 && r.t <= 21) chosen = seed;
   }
   if (!chosen) chosen = best ? best.seed : seed;
 
