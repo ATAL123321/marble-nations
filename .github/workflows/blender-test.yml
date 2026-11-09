@@ -13,8 +13,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Blender
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq blender > /dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq libxi6 libxxf86vm1 libxfixes3 libxrender1 libgl1 libxkbcommon0 libsm6 > /dev/null
+          curl -sL https://download.blender.org/release/Blender4.2/blender-4.2.3-linux-x64.tar.xz | tar xJ -C $HOME
+          sudo ln -sf $HOME/blender-4.2.3-linux-x64/blender /usr/local/bin/blender
           blender --version | head -1
       - name: Render still
         run: |
