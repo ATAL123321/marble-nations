@@ -1,0 +1,18 @@
+{
+ "seed": 52603,
+ "theme": "desert",
+ "teams": [
+  {
+   "name": "USA",
+   "code": "us"
+  },
+  {
+   "name": "MEXICO",
+   "code": "mx"
+  }
+ ],
+ "winner": "MEXICO",
+ "winT": 11.8,
+ "duration": 15.03,
+ "music": "drop_the_tapes_b.mp3"
+}
