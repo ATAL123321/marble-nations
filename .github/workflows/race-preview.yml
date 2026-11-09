@@ -1,0 +1,26 @@
+name: Race preview
+on:
+  push:
+    branches: [race-preview]
+    paths: ['.github/workflows/race-preview.yml']
+permissions: { contents: write }
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Install
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu-core > /dev/null
+          npm install --no-audit --no-fund playwright@1.56.0
+          npx playwright install --with-deps chromium
+      - name: Render
+        env: { TEAMS: "USA:us,MEXICO:mx", THEME: desert, SEED: "52603", OUT: out }
+        run: node render.js
+      - name: Save
+        run: |
+          git config user.name "render-bot"; git config user.email "render-bot@users.noreply.github.com"
+          git add -f out/race.mp4 out/meta.json && git commit -m "preview render" && git push
