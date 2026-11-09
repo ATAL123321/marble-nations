@@ -24,4 +24,4 @@ jobs:
       - name: Save result
         run: |
           git config user.name "render-bot"; git config user.email "render-bot@users.noreply.github.com"
-          git add blender/out/still.png && git commit -m "blender still" && git push
+          git add -f blender/out/still.png && git commit -m "blender still" && git push
